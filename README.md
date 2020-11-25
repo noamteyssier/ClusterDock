@@ -95,14 +95,18 @@ Here are some example usages :
 
 The current release of DOCK doesn't include the matching sphere usage output for each molecule
 so you will need to run the branch I am running. This is included in the repository alongside
-the wrapper scripts. 
+its submission wrapper scripts. 
 
-`<git_path/bin/*>`
+`<git_path>/bin/dock64`
 
 
 ```bash
-# submit DOCK run
+# to submit an individual DOCK run
+<git_path>/src/dock64
+
+# to submit a DOCK run with queue
 <git_path>/src/submit.csh
+
 ```
 
 

@@ -1,8 +1,6 @@
 # Matching Sphere Cluster Analysis
-## Author : Noam Teyssier
-## Date : 24 November 2020
 
-This a tutorial on how to perform matching sphere cluster analyses. 
+These are scripts for performing matching sphere clustering and for analyzing the downstream results.
 
 
 # Prerequisites
@@ -11,7 +9,7 @@ Clone the ClusterDock repository and initialize scripts
  * this just makes sure everything is pointing to the right place
 
 
-```{bash}
+```bash
 # I recommend putting this in a place you can access easily (~/bin, ~/lib)
 git clone https://github.com/noamteyssier/dock_cluster
 
@@ -44,7 +42,7 @@ meta/
 
 # Preparing Clusters
 The script to prepare clusters is found under :
-`<git_path>/dock_cluster/scripts/pipeline/ClusterSpheres.py`
+`<git_path>/src/ClusterSpheres.py`
 
 The script will run k-means on the matching sphere set and generate a directory for each k for as many iterations as it is given. The match_goal will be scaled to (Match_Goal * 1/k) if the flag is provided to the run. The num_sdi flag controls how many SDI clusters each run will be split into - the current default is 20 as is the default with blastermaster
 
@@ -71,7 +69,7 @@ optional arguments:
 ```
 
 Here are some example usages : 
-```{bash}
+```bash
 # prepare a clustered run with 7 subclusters
 ./ClusterSpheres.py -i meta/ -k 7 -n 1
 
@@ -101,12 +99,12 @@ The current release of DOCK doesn't include the matching sphere usage output for
 so you will need to run the branch I am running. This is included in the repository alongside
 the wrapper scripts. 
 
-`<git_path/scripts/DOCK/*>`
+`<git_path/bin/*>`
 
 
-```
+```bash
 # submit DOCK run
-<git_path>/dock_cluster/scripts/DOCK/submit.csh
+<git_path>/src/submit.csh
 ```
 
 

@@ -5,9 +5,7 @@ These are scripts for performing matching sphere clustering and for analyzing th
 
 # Prerequisites
 
-Clone the ClusterDock repository and initialize scripts
- * this just makes sure everything is pointing to the right place
-
+Clone the ClusterDock repository and initialize scripts. This will make sure everything is pointing to the right place.
 
 ```bash
 # I recommend putting this in a place you can access easily (~/bin, ~/lib)

@@ -1,0 +1,6 @@
+tqdm
+numpy
+pandas
+plotly
+argparse
+multiprocess

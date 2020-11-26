@@ -372,7 +372,7 @@ end
     )
 end
 
-function parallel_process(d, q)
+@everywhere function parallel_process(d, q)
     try
         ProcessDir(d, q)
     catch

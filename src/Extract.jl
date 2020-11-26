@@ -372,6 +372,15 @@ end
     )
 end
 
+function parallel_process(d, q)
+    try
+        ProcessDir(d, q)
+    catch
+        println("ERROR in {$d}")
+        return
+    end
+end
+
 function get_args()
     s = ArgParseSettings()
 
@@ -401,7 +410,7 @@ function main()
 
     # Parallel Map Arguments
     pmap(
-        (args)->ProcessDir(args...),
+        (args)->parallel_process(args...),
         arguments
         )
 

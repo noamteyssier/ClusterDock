@@ -131,11 +131,13 @@ using Pkg
 Pkg.add(["ArgParse", "Distributed", "DataFrames", "Statistics", "Printf", "GZip", "CSV"])
 using ArgParse, Distributed, DataFrames, Statistics, Printf, GZip, CSV
 ```
-## Output Files
+## Extract.jl Output Files
 
 This script operates on each cluster directory it is given via the `-i` flag which accepts as many arguments as is possible from the command line. 
 
 *You will have poor performance launching it independently for each one*
+
+Keep in mind that the advantage of Julia is that the first process for each core will be slow - but each one after that will be very fast. So if you have 4 clusters to process you have no speedup by using 4 cores. I'll leave this up to you to play around with to find core:cluster ratios that work best for you.
 
 Each directory will have 4 files written :
 1) extract_all.sort.txt 
@@ -149,7 +151,7 @@ Each directory will have 4 files written :
 
 (4) is the coordinates of the molecules considered hits. Essentially they are the coordinates of the molecules in extract_all.sort.uniq.txt that are below a certain threshold of Total energy. This threshold is determined given a quantile (the -q flag) but the default is 0.1. This will only accept molecules as hits if their energy is in the bottom 10% of all unique molecule energy. 
 
-## Example Usages
+## Extract.jl Example Usages
 ```bash
 
 # run on a single clustered directory (k2_1)
@@ -159,6 +161,7 @@ julia Extract.jl -i k2_1
 julia Extract.jl -i k2*/
 
 # run on all k directories and use 16 threads
+# note that the -p flag is an argument to julia and not the program
 julia -p 16 Extract.jl -i k*/
 
 # run on all k directories for all receptors using 24 threads

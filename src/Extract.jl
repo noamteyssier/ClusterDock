@@ -7,10 +7,10 @@ using Distributed
 @everywhere using GZip
 @everywhere using CSV
 
-@everywhere re_MolName = r"^#+ +Name: +"
-@everywhere re_Number = r"^#+ +Number: +"
-@everywhere re_OXR = r"^#+ +OXR +"
-@everywhere re_Total = r"^#+ +Total Energy: +"
+@everywhere const re_MolName = r"^#+ +Name: +"
+@everywhere const re_Number = r"^#+ +Number: +"
+@everywhere const re_OXR = r"^#+ +OXR +"
+@everywhere const re_Total = r"^#+ +Total Energy: +"
 
 @everywhere function build_gzfn(sub_idx, cls_idx)
     # zero padded cls_idx
@@ -414,13 +414,11 @@ function main()
         (d, parsed_args["quantile"]) for d in directories
     ]
 
-    ProcessDir(directories[1], parsed_args["quantile"])
-
-    # # Parallel Map Arguments
-    # pmap(
-    #     (args)->parallel_process(args...),
-    #     arguments
-    #     )
+    # Parallel Map Arguments
+    pmap(
+        (args)->parallel_process(args...),
+        arguments
+        )
 
 end
 

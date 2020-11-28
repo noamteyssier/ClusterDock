@@ -93,9 +93,7 @@ Here are some example usages :
 
 # Running DOCK on each cluster
 
-The current release of DOCK doesn't include the matching sphere usage output for each molecule
-so you will need to run the branch I am running. This is included in the repository alongside
-its submission wrapper scripts. 
+The current release of DOCK doesn't include the matching sphere usage output for each molecule so you will need to run the branch I am running. This is included in the repository alongside its submission wrapper scripts. 
 
 `<git_path>/bin/dock64`
 
@@ -109,4 +107,67 @@ its submission wrapper scripts.
 
 ```
 
+# Extracting Results
+
+DOCK results are a bit annoying to parse out, and I wanted to be flexible to existing scripts out there but also write code that makes dataframes that are easy to work with downstream. I have written a script that extracts all relevant data for cluster analysis - I decided to write it in Julia instead of python because it was roughly the same development time with a 10-100x speedup in terms of data processing - especially once parallel processing was involved. The only cost is that there is a long startup time to this script as it reads in the precompiled packages. You will need a version of Julia >1 for this script. I recommend preparing all the packages beforehand. The script is found here `<git_path>/src/Extract.jl`. This tutorial will assume you have julia on your path.
+
+## Prerequisite : Prepare Julia
+
+```bash
+# check version (version at time of writing : 1.4.1)
+julia --version
+
+# enter REPL
+julia
+```
+
+Once you're in the REPL just drop this code in. 
+It'll take a little while to run if it's your first time building these. 
+
+```julia
+# This is a good time to make a coffee 
+
+using Pkg
+Pkg.add(["ArgParse", "Distributed", "DataFrames", "Statistics", "Printf", "GZip", "CSV"])
+using ArgParse, Distributed, DataFrames, Statistics, Printf, GZip, CSV
+```
+## Extract.jl Output Files
+
+This script operates on each cluster directory it is given via the `-i` flag which accepts as many arguments as is possible from the command line. 
+
+*You will have poor performance launching it independently for each one*
+
+Keep in mind that the advantage of Julia is that the first process for each core will be slow - but each one after that will be very fast. So if you have 4 clusters to process you have no speedup by using 4 cores. I'll leave this up to you to play around with to find core:cluster ratios that work best for you.
+
+Each directory will have 4 files written :
+1) extract_all.sort.txt 
+2) extract_all.sort.uniq.txt
+3) time_and_enrichment.tab
+4) coords.tab
+
+(1) and (2) are written more for legacy purposes and to be backwards compatible with other scripts that may use these - they will not be used again in downstream analyses.
+
+(3) is the number of time spent in each SDI subcluster alongside the AUC and LogAUC of the run. This is calculated using the best scoring pose of each molecule.
+
+(4) is the coordinates of the molecules considered hits. Essentially they are the coordinates of the molecules in extract_all.sort.uniq.txt that are below a certain threshold of Total energy. This threshold is determined given a quantile (the -q flag) but the default is 0.1. This will only accept molecules as hits if their energy is in the bottom 10% of all unique molecule energy. 
+
+## Extract.jl Example Usages
+```bash
+
+# run on a single clustered directory (k2_1)
+julia Extract.jl -i k2_1
+
+# run on all k2 directories
+julia Extract.jl -i k2*/
+
+# run on all k directories and use 16 threads
+# note that the -p flag is an argument to julia and not the program
+julia -p 16 Extract.jl -i k*/
+
+# run on all k directories for all receptors using 24 threads
+julia -p 24 Extract.jl -i {AA2AR,EGFR,AMPC}/k*/ 
+
+# run on all k directories using 12 threads with a quantile of 0.2
+julia -p 12 Extract.jl -i k*/ -q 0.2
+```
 

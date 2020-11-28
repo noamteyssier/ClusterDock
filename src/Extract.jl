@@ -28,8 +28,9 @@ end
     y = TPR
     """
 
-    areas = []
-    for i in 1:(length(x)-1)
+    s = length(x) - 1
+    areas = zeros(s)
+    for i in 1:(s)
         x1 = x[i]
         x2 = x[i+1]
         y1 = y[i]
@@ -42,7 +43,7 @@ end
         a_j = (dy * dx)/2
         a = a_i + a_j
 
-        push!(areas, a)
+        areas[i] = a
     end
 
     area = sum(areas)
@@ -65,8 +66,9 @@ end
     # scale to maximum
     log_x = log_x ./ max(log_x...)
 
-    areas = []
-    for i in 1:(length(x)-1)
+    s = length(x) - 1
+    areas = zeros(s)
+    for i in 1:(s)
         x1 = log_x[i]
         x2 = log_x[i+1]
         y1 = y[i]
@@ -79,7 +81,7 @@ end
         a_j = (dy * dx)/2
         a = a_i + a_j
 
-        push!(areas, a)
+        areas[i] = a
     end
 
     area = sum(areas)
@@ -158,30 +160,33 @@ end
 
     # exit if number is not found
     if !in(number, mol_set)
-        return
+        return false
+
+    else
+        # skip 4
+        [readline(io) for i in 1:4]
+
+        # prepare OXR
+        oxr = []
+        for i in 1:4
+            line = split(replace(readline(io), re_OXR => ""))
+            append!(oxr, line)
+        end
+
+        # skip 14
+        [readline(io) for i in 1:14]
+
+        # parse Total
+        total = replace(strip(readline(io)), re_Total=>"")
+
+
+        append!(values, [name, number, total])
+        append!(values, oxr)
+
+        push!(coord_frame, values)
+
+        return true
     end
-
-    # skip 4
-    [readline(io) for i in 1:4]
-
-    # prepare OXR
-    oxr = []
-    for i in 1:4
-        line = split(replace(readline(io), re_OXR => ""))
-        append!(oxr, line)
-    end
-
-    # skip 14
-    [readline(io) for i in 1:14]
-
-    # parse Total
-    total = replace(strip(readline(io)), re_Total=>"")
-
-
-    append!(values, [name, number, total])
-    append!(values, oxr)
-
-    push!(coord_frame, values)
 end
 
 @everywhere function ParseMol2(sub_idx, cls_idx, mol_frame, coord_frame)
@@ -373,12 +378,13 @@ end
 end
 
 @everywhere function parallel_process(d, q)
-    try
-        ProcessDir(d, q)
-    catch
-        println("ERROR in {$d}")
-        return
-    end
+    # try
+    #     ProcessDir(d, q)
+    # catch
+    #     println("ERROR in {$d}")
+    #     return
+    # end
+    ProcessDir(d, q)
 end
 
 function get_args()
@@ -408,11 +414,13 @@ function main()
         (d, parsed_args["quantile"]) for d in directories
     ]
 
-    # Parallel Map Arguments
-    pmap(
-        (args)->parallel_process(args...),
-        arguments
-        )
+    ProcessDir(directories[1], parsed_args["quantile"])
+
+    # # Parallel Map Arguments
+    # pmap(
+    #     (args)->parallel_process(args...),
+    #     arguments
+    #     )
 
 end
 

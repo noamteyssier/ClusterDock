@@ -340,7 +340,7 @@ end
         delim="\t", header=false
         )
     CSV.write(
-        "$dir_name/extract_all.sort.unique.txt",
+        "$dir_name/extract_all.sort.uniq.txt",
         select(unique_score_frame, Not(:cls_idx)),
         delim="\t", header=false
         )
@@ -385,13 +385,12 @@ end
 end
 
 @everywhere function parallel_process(d, q)
-    # try
-    #     ProcessDir(d, q)
-    # catch
-    #     println("ERROR in {$d}")
-    #     return
-    # end
-    ProcessDir(d, q)
+    try
+        ProcessDir(d, q)
+    catch
+        println("ERROR in {$d}")
+        return
+    end
 end
 
 function get_args()

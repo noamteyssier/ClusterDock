@@ -57,6 +57,13 @@ end
     x = FPR
     y = TPR
     """
+
+    # avoid a negative infinite X
+    minimum_nonzero = min(x[x.>0]...)
+
+    # set early zeros to earliest non_negative minimum
+    x[x.==0] .= minimum_nonzero
+
     # transform FPR to log10
     log_x = log10.(x)
 

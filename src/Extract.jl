@@ -28,72 +28,54 @@ end
     y = TPR
     """
 
-    s = length(x) - 1
-    areas = zeros(s)
-    for i in 1:(s)
-        x1 = x[i]
-        x2 = x[i+1]
-        y1 = y[i]
-        y2 = y[i+1]
+    s = length(x)
 
-        dx = x2-x1
-        dy = y2-y1
+    a = zeros(s)
+    for i in 1:s-1
+        x1, x2 = x[i:i+1]
+        y1, y2 = y[i:i+1]
 
-        a_i = dx * y1
-        a_j = (dy * dx)/2
-        a = a_i + a_j
-
-        areas[i] = a
+        a[i] = (x2-x1) * ((y1 + y2) / 2)
     end
 
-    area = sum(areas)
-    str_area = @sprintf "%.2f" area*100
-    return str_area
+    return sum(a)
 end
 
-@everywhere function LogAUC(x, y)
+@everywhere function LogAUC(x, y, lambda = 0.001)
     """
-    Calculates LogAUC using the adapted trapezoidal rule
-    x = FPR
-    y = TPR
+    Calculated Adjusted LogAUC as decribed in Mysinger/Shoichet 2010
+    doi://10.1021/ci100214a
     """
 
-    # avoid a negative infinite X
-    minimum_nonzero = min(x[x.>0]...)
+    logauc_max = 1.0
+    random_logauc = (logauc_max-lambda)/log.(10)/log10.(logauc_max/lambda)
 
-    # set early zeros to earliest non_negative minimum
-    x[x.==0] .= minimum_nonzero
-
-    # transform FPR to log10
-    log_x = log10.(x)
-
-    # center minimum to zero
-    log_x = log_x .+ abs(min(log_x...))
-
-    # scale to maximum
-    log_x = log_x ./ max(log_x...)
-
-    s = length(x) - 1
-    areas = zeros(s)
-    for i in 1:(s)
-        x1 = log_x[i]
-        x2 = log_x[i+1]
-        y1 = y[i]
-        y2 = y[i+1]
-
-        dx = x2-x1
-        dy = y2-y1
-
-        a_i = dx * y1
-        a_j = (dy * dx)/2
-        a = a_i + a_j
-
-        areas[i] = a
+    # identifies starting point for arrays (first nonzero FPR)
+    start = 0
+    for i in 1:length(x)
+        if x[i] >= lambda
+            start = i
+            break
+        end
     end
 
-    area = sum(areas)
-    str_area = @sprintf "%.2f" area*100
-    return str_area
+    # slice arrays to correct size
+    new_x = x[start:end]
+    new_y = y[start:end]
+
+    # take log of x
+    log_x = log10.(new_x)
+
+    # center log10 of x
+    log_x = log_x .+ abs(min(log_x...))
+
+    # bound log_x to 0,1
+    log_x = log_x ./ max(log_x...)
+
+    # calculate AUC and adjust for random_logauc
+    log_auc = AUC(log_x, new_y) - random_logauc
+
+    return log_auc
 end
 
 @everywhere function ReadName(name_fn)
@@ -107,53 +89,57 @@ end
     return Set(names)
 end
 
-@everywhere function LabelType(frame, ligand_set, decoy_set)
-    """
-    Labels the ligand/decoy type for a given dataframe
-    """
-
+@everywhere function label!(frame, l_set, d_set)
     frame[!, :Type] = map(
-        x -> if in(x, ligand_set) "Ligand" elseif in(x, decoy_set) "Decoy" else missing end,
+        x -> if in(x, l_set) "ligand" elseif in(x, d_set) "decoy" else missing end,
         frame[!, :mol_name]
     )
 end
 
-@everywhere function CalculateAUC(score_frame, ligand_set, decoy_set)
+@everywhere function ROC(frame)
+    """
+    Requires frame with :Type annotated as ligand/decoy
 
-    LabelType(score_frame, ligand_set, decoy_set)
+    FPR : False Positive Rate (FP / FP + TN)
+    TPR : True Positive Rate (TP / TP + FN)
+    """
 
-    dropmissing!(score_frame)
-    sort!(score_frame, :Total)
+    roc = Dict(:FPR => Float64[0.0], :TPR => Float64[0.0])
 
-    roc = DataFrame(FPR = Float64[], TPR = Float64[])
+    FP = 0
+    TP = 0
 
-    type_arr = score_frame[!, :Type]
-    total_ligands = sum(map(x -> x == "Ligand", type_arr))
-    total_decoys = sum(map(x -> x == "Decoy", type_arr))
+    P = sum(frame[:, :Type] .== "ligand")
+    N = sum(frame[:, :Type] .== "decoy")
 
-    num_ligands = 0
-    num_decoys = 0
-    total = 0
-    for i in 1:size(score_frame)[1]
-        values = []
-        if type_arr[i] == "Ligand"
-            num_ligands += 1
+    for t in frame[:, :Type]
+        if t == "ligand"
+            TP += 1
         else
-            num_decoys += 1
+            FP += 1
         end
-        total+=1
 
-        TPR = num_ligands / total_ligands
-        FPR = num_decoys / total_decoys
+        fpr = FP / N
+        tpr = TP / P
 
-        values = [FPR, TPR]
-        push!(roc, values)
+        push!(roc[:FPR], fpr)
+        push!(roc[:TPR], tpr)
+
     end
 
+    return DataFrame(roc, copycols=false)
+end
+
+@everywhere function CalculateAUC(score_frame, ligand_set, decoy_set)
+
+    label!(score_frame, ligand_set, decoy_set)
+    sort!(score_frame, :Total)
+
+    roc = ROC(score_frame)
     auc = AUC(roc[!, :FPR], roc[!, :TPR])
     log_auc = LogAUC(roc[!, :FPR], roc[!, :TPR])
 
-    return [auc, log_auc]
+    return [@sprintf "%.4f" i*100 for i in [auc, log_auc]]
 end
 
 @everywhere function AddMolecule(line_name, io, mol_set, sub_idx, cls_idx, coord_frame)
@@ -346,7 +332,7 @@ end
         )
 
     # Calculate AUC and LogAUC
-    auc, log_auc = CalculateAUC(score_frame, ligand_set, decoy_set)
+    auc, log_auc = CalculateAUC(unique_score_frame, ligand_set, decoy_set)
     time_frame[!, :AUC] .= auc
     time_frame[!, :LogAUC] .= log_auc
 
@@ -364,7 +350,7 @@ end
     end
 
     # label type for ligand set
-    LabelType(coord_frame, ligand_set, decoy_set)
+    label!(coord_frame, ligand_set, decoy_set)
     coord_frame[!, :mol_total] = map(
         x -> parse(Float64, x),
         coord_frame[!, :mol_total]

@@ -125,9 +125,6 @@ function main(fn)
 
     open(fn) do io
 
-        # skip header
-        readline(io)
-
         # preallocated
         spheres = Array{MatchingSphere, 1}(undef, 4)
 

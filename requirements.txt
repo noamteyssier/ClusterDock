@@ -4,3 +4,4 @@ pandas
 plotly
 argparse
 multiprocess
+dash

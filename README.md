@@ -171,3 +171,38 @@ julia -p 24 Extract.jl -i {AA2AR,EGFR,AMPC}/k*/
 julia -p 12 Extract.jl -i k*/ -q 0.2
 ```
 
+# Collecting Output
+
+This is more difficult to generalize because every run is different, but the experiments that this were designed for had 3 types of indexing data :
+* Receptor
+* Match Type (normal / scaled)
+* Cluster ID (k-means clustered id)
+
+Collecting this data was done with the following command from the experimental directory nested by `receptor/match_type/cluster_id`
+```bash
+
+# collecting performance statistics
+find . -name "time_and_enrichment.tab" -exec cat {} \; | \
+	tr "/" "\t" > merged_time_and_enrichment.tab
+
+
+# collecting coordinate statistics
+find . -name "coords.tab" -exec tail -n +2 {} \; | \
+	tr "/" "\t" > merged_coords.tab
+
+# collect coordinate usage statistics for plotting
+# this will create 2 extra files (co-occurrence.tab, sphere_usage.tab)
+julia SphereUsage.jl merged_coords.tab
+```
+
+# Visualizing Results
+
+After collecting the results into the data/ directory run the following python script which will create a Dash webapp to explore
+It will create a webserver on the localhost and provide a link in the terminal for you to view. 
+
+```bash
+
+# confirm that the expected 4 files are within the data/ directory
+# merged_time_and_enrichment.tab, merged_coords.tab, sphere_usage.tab, co-occurrence.tab
+./Performance.py
+```

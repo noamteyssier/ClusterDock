@@ -131,18 +131,36 @@ cluster_ids = sorted(ms_frame.cluster_id.unique())
 
 app.layout = html.Div([
     dcc.Tabs(id='tab-id', value='tab-1', children=[
-        dcc.Tab(label='Timing and Enrichment Performance', value='tab-1'),
-        dcc.Tab(label='Matching Sphere Usage', value='tab-2'),
+        dcc.Tab(label='Global Timing and Enrichment Performance', value='tab-1'),
+        dcc.Tab(label='Individual Timing and Enrichment Performance', value='tab-2'),
+        dcc.Tab(label='Matching Sphere Usage', value='tab-3'),
     ]),
     html.Div(id='tab-content')
 ])
 
-@app.callback(Output('tab-content', 'children'),
-              Input('tab-id', 'value'))
+@app.callback(
+    Output('tab-content', 'children'),
+    Input('tab-id', 'value')
+)
 def render_content(tab):
 
-    # Plot Performance Statistics
     t1 = html.Div([
+        html.Div([
+            html.Div([
+                dcc.RadioItems(
+                    id = "Aggregate",
+                    options = [{'label' : m, 'value' : m} for m in ["Aggregate", "All"]],
+                    value = "All",
+                    style={'float' : 'left', "width" : "100%", 'display' : 'block'}
+                )
+            ])
+        ]),
+        dcc.Graph(id = "Global_PercentChange", style = {'width' : '100%', 'display' : 'inline-block'}),
+        dcc.Graph(id = "Global_Speedup", style = {'width' : '100%', 'display' : 'inline-block'})
+    ])
+
+    # Plot Performance Statistics
+    t2 = html.Div([
         html.Div([
             html.Div([
                 dcc.Dropdown(
@@ -160,7 +178,7 @@ def render_content(tab):
     ])
 
     # Plot Single Run Statistics
-    t2 = html.Div([
+    t3 = html.Div([
         html.Div([
             html.Div([
                 dcc.Dropdown(
@@ -206,13 +224,74 @@ def render_content(tab):
 
     if tab == 'tab-1':
         return t1
-    else:
+    elif tab == 'tab-2':
         return t2
+    else:
+        return t3
 
 
-####################################
-# Enrichment and Timing Statistics #
-####################################
+###########################################
+# Global Enrichment and Timing Statistics #
+###########################################
+
+agg_scores = time_scores.\
+    groupby(['receptor','k', 'match_type']).\
+    apply(
+        lambda x : pd.Series({
+            "AggEnrichMean" : x.pc_enrich.mean(),
+            "AggEnrichMax" : x.pc_enrich.max(),
+            "AggSpeedupMean" : x.speedup.mean(),
+            "AggSpeedupMax" : x.speedup.max()
+        })
+    ).reset_index().\
+    melt(id_vars = ['k', 'receptor', 'match_type'])
+
+@app.callback(
+    Output("Global_PercentChange", "figure"),
+    Input("Aggregate", "value")
+)
+def Global_PercentChange(agg):
+    if agg == "Aggregate":
+        fig = px.box(
+            agg_scores[agg_scores.variable.str.contains("Enrich")],
+            x = 'k', y = 'value', points='all',
+            color = 'match_type', hover_name = 'receptor',
+            facet_col = 'variable'
+        )
+    else:
+        fig = px.box(
+            time_scores, x = 'k', y = 'pc_enrich',
+            color = 'receptor', facet_row = 'match_type'
+        )
+
+    fig.update_xaxes(title = "Number of Subclusters (K-Means)")
+    fig.update_yaxes(title = "%Change LogAUC")
+    return fig
+
+@app.callback(
+    Output("Global_Speedup", "figure"),
+    Input("Aggregate", "value")
+)
+def Global_PercentChange(agg):
+    if agg == "Aggregate":
+        fig = px.box(
+            agg_scores[agg_scores.variable.str.contains("Speedup")],
+            x = 'k', y = 'value', points='all',
+            color = 'match_type', hover_name = 'receptor',
+            facet_col = 'variable'
+        )
+    else:
+        fig = px.box(
+            time_scores, x = 'k', y = 'speedup',
+            color = 'receptor', facet_row = 'match_type'
+        )
+    fig.update_xaxes(title = "Number of Subclusters (K-Means)")
+    fig.update_yaxes(title = "Fold Speedup")
+    return fig
+
+#################################################
+# Individidual Enrichment and Timing Statistics #
+#################################################
 
 @app.callback(
     Output("LogAUC", "figure"),
@@ -365,4 +444,4 @@ def update_cooccurrence(rec, mt, ci):
     return fig
 
 if __name__ == '__main__':
-    app.run_server(debug=False)
+    app.run_server(debug=True)

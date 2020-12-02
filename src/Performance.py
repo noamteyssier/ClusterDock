@@ -205,21 +205,27 @@ def render_content(tab):
         dcc.Graph(
             id = 'Co-Occurrence',
             style = {
-                'width' : '40%', 'float' : 'left',
-                'height' : "37vh", 'column' : "1"
+                'width' : '30%', 'float' : 'left',
+                'height' : "35vh", 'column' : "1"
                 }),
         dcc.Graph(
             id = 'SphereUsage',
             style = {
                 'width' : '60%', 'float' : 'right',
-                'height' : "75vh", 'column' : "2"
+                'height' : "60vh", 'column' : "2"
                 }),
         dcc.Graph(
             id = 'Ligand-Decoy',
             style = {
                 'width' : '40%', 'float' : 'left',
-                'height' : "37vh", 'column' : "1"
+                'height' : "45vh", 'column' : "1"
                 }),
+        dcc.Graph(
+            id = 'UsageBar',
+            style = {
+                'width' : '60%', 'float' : 'right',
+                'height' : "20vh", 'column' : "1"
+                })
     ])
 
     if tab == 'tab-1':
@@ -413,6 +419,29 @@ def update_ligand_usage(rec, mt, ci):
     )
     fig.update_traces(textposition = 'top center', marker=dict(color = 'black'))
     fig.update_layout(title = "Matching Sphere Ligand/Decoy Usage")
+
+    return fig
+
+@app.callback(
+    Output("UsageBar", "figure"),
+    Input("Receptor", "value"),
+    Input("MatchType", "value"),
+    Input("Cluster ID", "value")
+)
+def update_ligand_usage(rec, mt, ci):
+    sub_frame = ms_frame[
+        (ms_frame.match_type == mt) &
+        (ms_frame.receptor == rec) &
+        (ms_frame.cluster_id == ci)
+    ].sort_values("ms_id")
+    total_usage = sub_frame.Usage.sum()
+    sub_frame['fractional_usage'] = sub_frame.Usage / total_usage
+
+    fig = px.bar(
+        sub_frame, x = 'ms_id', y = "Usage",
+        color = 'fractional_usage'
+    )
+    fig.update_layout(title = "Individual Sphere Usage")
 
     return fig
 

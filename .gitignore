@@ -2,3 +2,4 @@ test/**
 data/*.tab
 notebooks/
 figures/
+data/k*/

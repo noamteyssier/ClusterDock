@@ -196,7 +196,7 @@ def render_content(tab):
                 ),
                 dcc.RadioItems(
                     id = "MatchType",
-                    options = [{'label' : m, 'value' : m} for m in ['c_match', 's_match']],
+                    options = [{'label' : m, 'value' : m} for m in ['c_match', 's_match', "mt"]],
                     value = "c_match",
                     style={'float' : 'left', "width" : "100%", 'display' : 'block'}
                 )
